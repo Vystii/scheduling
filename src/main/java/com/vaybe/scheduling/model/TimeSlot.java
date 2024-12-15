@@ -4,10 +4,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
+// import jakarta.persistence.OneToMany;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+// import java.util.ArrayList;
+// import java.util.List;
 
 @Entity
 public class TimeSlot {
@@ -17,9 +17,6 @@ public class TimeSlot {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private int dayOfWeek; // 1 for Monday, 2 for Tuesday, ..., 7 for Sunday
-
-    @OneToMany(mappedBy = "timeSlot")
-    private List<Schedule> schedules = new ArrayList<>(); // Reference to Schedule entity
 
     // Getters and Setters
     public Long getId() {
@@ -52,18 +49,5 @@ public class TimeSlot {
 
     public void setDayOfWeek(int dayOfWeek) {
         this.dayOfWeek = dayOfWeek;
-    }
-
-    public List<Schedule> getSchedules() {
-        return schedules;
-    }
-
-    public void setSchedules(List<Schedule> schedules) {
-        this.schedules = schedules;
-    }
-
-    public void addSchedule(Schedule schedule) {
-        this.schedules.add(schedule);
-        schedule.setTimeSlot(this);
     }
 }

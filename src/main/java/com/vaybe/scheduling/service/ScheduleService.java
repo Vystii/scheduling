@@ -61,11 +61,8 @@ public class ScheduleService {
         List<Schedule> existingSchedules = scheduleRepository.findAll();
         for (Schedule schedule : existingSchedules) {
             if (schedule.getTimeSlot() != null) {
-                TimeSlot timeSlot = schedule.getTimeSlot();
-                timeSlot.getSchedules().remove(schedule);
                 schedule.setTimeSlot(null);
                 scheduleRepository.save(schedule);
-                timeSlotRepository.save(timeSlot);
             }
         }
 
@@ -103,11 +100,15 @@ public class ScheduleService {
                             if (timeSlotData.assignCourse(course, room, granularity)
                                     && room.getCapacity() >= course.getExpectedStudents()) {
                                 Schedule schedule = createScheduleWithoutTimeSlot(course, room, day + 1);
+                                System.out.println("adding schedule");
                                 generatedSchedules.add(schedule);
+                                System.out.println(schedule.getDescription());
                                 saveTimeSlotForSchedule(timeSlotData, schedule, day + 1);
                                 scheduledCourseIds.add(course.getId());
                                 scheduled = true;
                                 break;
+                            } else {
+                                System.out.println("there is something wrong");
                             }
                         }
                         if (scheduled)
@@ -167,8 +168,9 @@ public class ScheduleService {
         timeSlot.setStartTime(timeSlotData.getStartTime());
         timeSlot.setEndTime(timeSlotData.getEndTime());
         timeSlot.setDayOfWeek(dayOfWeek);
-        timeSlot.addSchedule(schedule); // Add Schedule to TimeSlot
         timeSlotRepository.save(timeSlot);
+        schedule.setTimeSlot(timeSlot);
+        scheduleRepository.save(schedule);
     }
 
     private class TimeSlotData {
@@ -191,7 +193,10 @@ public class ScheduleService {
         }
 
         public boolean assignCourse(CourseDTO course, RoomDTO room, int granularity) {
-            if (isAvailable() && canAccommodate(granularity) && !assignedCourses.containsKey(course.getClassId())) {
+            if (isAvailable()
+                    && canAccommodate(granularity)
+                    && room.getCapacity() >= course.getExpectedStudents()
+                    && !assignedCourses.containsKey(course.getClassId())) {
                 this.available = false;
                 assignedCourses.put(course.getClassId(), course);
                 return true;

@@ -58,16 +58,19 @@ class ScheduleServiceTest {
         course1.setId(1L);
         course1.setLevel("Beginner");
         course1.setClassId("ClassA");
+        course1.setExpectedStudents(25);
 
         CourseDTO course2 = new CourseDTO();
         course2.setId(2L);
         course2.setLevel("Intermediate");
         course2.setClassId("ClassA");
+        course2.setExpectedStudents(40);
 
         CourseDTO course3 = new CourseDTO();
         course3.setId(3L);
         course3.setLevel("Advanced");
         course3.setClassId("ClassB");
+        course3.setExpectedStudents(55);
 
         ScheduleRequestDTO request = new ScheduleRequestDTO();
         request.setGranularity(180); // 3 hours
@@ -81,11 +84,11 @@ class ScheduleServiceTest {
         // Assertions
         assertThat(response).isNotNull();
         assertThat(response.getSchedule()).isNotEmpty();
-        assertThat(response.getUnscheduled()).isEmpty();
+        assertThat(response.getUnscheduled()).contains(course3); // Course 3 should be unscheduled due to capacity
 
         // Verify each course is assigned correctly
         List<Schedule> schedules = response.getSchedule();
-        assertThat(schedules).hasSize(3);
+        assertThat(schedules).hasSize(2);
 
         Schedule schedule1 = schedules.get(0);
         assertThat(schedule1.getTitle()).isEqualTo("Course 1");
@@ -109,16 +112,8 @@ class ScheduleServiceTest {
         assertThat(schedule2.getTimeSlot().getStartTime()).isNotNull();
         assertThat(schedule2.getTimeSlot().getEndTime()).isNotNull();
 
-        Schedule schedule3 = schedules.get(2);
-        assertThat(schedule3.getTitle()).isEqualTo("Course 3");
-        assertThat(schedule3.getDescription()).contains("Level: Advanced");
-        assertThat(schedule3.getRoomId()).isNotNull();
-        assertThat(schedule3.getClassId()).isEqualTo("ClassB");
-        assertThat(schedule3.getCourseId()).isEqualTo(3L);
-        assertThat(schedule3.getTimeSlot()).isNotNull();
-        assertThat(schedule3.getTimeSlot().getDayOfWeek()).isEqualTo(1); // Assuming Monday
-        assertThat(schedule3.getTimeSlot().getStartTime()).isNotNull();
-        assertThat(schedule3.getTimeSlot().getEndTime()).isNotNull();
+        // Verify course3 is correctly unscheduled due to capacity
+        assertThat(response.getUnscheduled()).contains(course3);
     }
 
     // Additional tests for other scenarios can be added here
