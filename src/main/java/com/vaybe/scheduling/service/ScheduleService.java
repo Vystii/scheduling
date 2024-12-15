@@ -6,8 +6,10 @@ import com.vaybe.scheduling.dto.ScheduleRequestDTO;
 import com.vaybe.scheduling.dto.ScheduleResponseDTO;
 import com.vaybe.scheduling.model.Schedule;
 import com.vaybe.scheduling.model.TimeSlot;
+import com.vaybe.scheduling.model.Settings;
 import com.vaybe.scheduling.repository.ScheduleRepository;
 import com.vaybe.scheduling.repository.TimeSlotRepository;
+import com.vaybe.scheduling.repository.SettingsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +29,9 @@ public class ScheduleService {
 
     @Autowired
     private TimeSlotRepository timeSlotRepository;
+
+    @Autowired
+    private SettingsRepository settingsRepository;
 
     public Schedule createSchedule(Schedule schedule) {
         return scheduleRepository.save(schedule);
@@ -56,21 +61,23 @@ public class ScheduleService {
         return scheduleRepository.findAll();
     }
 
-    public ScheduleResponseDTO generateSchedule(ScheduleRequestDTO request) {
+    public ScheduleResponseDTO generateSchedule(ScheduleRequestDTO request, boolean deleteExistingSchedules) {
         // Step 1: Retrieve and break dependencies
-        List<Schedule> existingSchedules = scheduleRepository.findAll();
-        for (Schedule schedule : existingSchedules) {
-            if (schedule.getTimeSlot() != null) {
-                schedule.setTimeSlot(null);
-                scheduleRepository.save(schedule);
+        if (deleteExistingSchedules) {
+            List<Schedule> existingSchedules = scheduleRepository.findAll();
+            for (Schedule schedule : existingSchedules) {
+                if (schedule.getTimeSlot() != null) {
+                    schedule.setTimeSlot(null);
+                    scheduleRepository.save(schedule);
+                }
             }
+
+            // Step 2: Delete TimeSlots
+            timeSlotRepository.deleteAll();
+
+            // Step 3: Delete Schedules
+            scheduleRepository.deleteAll();
         }
-
-        // Step 2: Delete TimeSlots
-        timeSlotRepository.deleteAll();
-
-        // Step 3: Delete Schedules
-        scheduleRepository.deleteAll();
 
         List<Schedule> generatedSchedules = new ArrayList<>();
         List<CourseDTO> unscheduledCourses = new ArrayList<>(request.getCourses());
@@ -97,18 +104,14 @@ public class ScheduleService {
                 for (TimeSlotData timeSlotData : dayTimeSlots) {
                     if (timeSlotData.isAvailable() && timeSlotData.canAccommodate(granularity)) {
                         for (RoomDTO room : rooms) {
-                            if (timeSlotData.assignCourse(course, room, granularity)
-                                    && room.getCapacity() >= course.getExpectedStudents()) {
+                            if (room.getCapacity() >= course.getExpectedStudents()
+                                    && timeSlotData.assignCourse(course, room, granularity)) {
                                 Schedule schedule = createScheduleWithoutTimeSlot(course, room, day + 1);
-                                System.out.println("adding schedule");
                                 generatedSchedules.add(schedule);
-                                System.out.println(schedule.getDescription());
                                 saveTimeSlotForSchedule(timeSlotData, schedule, day + 1);
                                 scheduledCourseIds.add(course.getId());
                                 scheduled = true;
                                 break;
-                            } else {
-                                System.out.println("there is something wrong");
                             }
                         }
                         if (scheduled)
@@ -163,12 +166,23 @@ public class ScheduleService {
     }
 
     private void saveTimeSlotForSchedule(TimeSlotData timeSlotData, Schedule schedule, int dayOfWeek) {
-        // Create and save the TimeSlot entity
-        TimeSlot timeSlot = new TimeSlot();
-        timeSlot.setStartTime(timeSlotData.getStartTime());
-        timeSlot.setEndTime(timeSlotData.getEndTime());
-        timeSlot.setDayOfWeek(dayOfWeek);
-        timeSlotRepository.save(timeSlot);
+        // Check if a TimeSlot already exists
+        Optional<TimeSlot> existingTimeSlot = timeSlotRepository.findByStartTimeAndEndTimeAndDayOfWeek(
+                timeSlotData.getStartTime(), timeSlotData.getEndTime(), dayOfWeek);
+
+        TimeSlot timeSlot;
+        if (existingTimeSlot.isPresent()) {
+            timeSlot = existingTimeSlot.get();
+        } else {
+            // Create and save a new TimeSlot entity
+            timeSlot = new TimeSlot();
+            timeSlot.setStartTime(timeSlotData.getStartTime());
+            timeSlot.setEndTime(timeSlotData.getEndTime());
+            timeSlot.setDayOfWeek(dayOfWeek);
+            timeSlotRepository.save(timeSlot);
+        }
+
+        // Set the TimeSlot in Schedule and save it
         schedule.setTimeSlot(timeSlot);
         scheduleRepository.save(schedule);
     }
@@ -212,4 +226,16 @@ public class ScheduleService {
             return endTime;
         }
     }
+
+    public void saveSettings(int granularity, int pauseDuration) {
+        Settings settings = new Settings();
+        settings.setGranularity(granularity);
+        settings.setPauseDuration(pauseDuration);
+        settingsRepository.save(settings);
+    }
+
+    public Settings getSettings() {
+        return settingsRepository.findAll().stream().findFirst().orElse(null);
+    }
+
 }
