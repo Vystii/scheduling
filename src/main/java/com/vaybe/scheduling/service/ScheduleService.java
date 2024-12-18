@@ -1,29 +1,29 @@
 package com.vaybe.scheduling.service;
 
-import com.vaybe.scheduling.dto.CourseDTO;
-import com.vaybe.scheduling.dto.RoomDTO;
 import com.vaybe.scheduling.dto.ScheduleRequestDTO;
 import com.vaybe.scheduling.dto.ScheduleResponseDTO;
+import com.vaybe.scheduling.model.Course;
+import com.vaybe.scheduling.model.Room;
 import com.vaybe.scheduling.model.Schedule;
-import com.vaybe.scheduling.model.TimeSlot;
+import com.vaybe.scheduling.model.SchoolClass;
 import com.vaybe.scheduling.model.Settings;
+import com.vaybe.scheduling.model.TimeSlot;
 import com.vaybe.scheduling.repository.ScheduleRepository;
 import com.vaybe.scheduling.repository.TimeSlotRepository;
+import com.vaybe.scheduling.util.TimeSlotData;
+import com.vaybe.scheduling.repository.RoomRepository;
 import com.vaybe.scheduling.repository.SettingsRepository;
+import com.vaybe.scheduling.repository.CourseRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class ScheduleService {
+
     @Autowired
     private ScheduleRepository scheduleRepository;
 
@@ -31,87 +31,68 @@ public class ScheduleService {
     private TimeSlotRepository timeSlotRepository;
 
     @Autowired
+    private RoomRepository roomRepository;
+
+    @Autowired
     private SettingsRepository settingsRepository;
 
-    public Schedule createSchedule(Schedule schedule) {
-        return scheduleRepository.save(schedule);
-    }
+    @Autowired
+    private SchoolClassService schoolClassService;
 
-    public Schedule updateSchedule(Long id, Schedule updatedSchedule) {
-        Optional<Schedule> existingScheduleOptional = scheduleRepository.findById(id);
-        if (existingScheduleOptional.isPresent()) {
-            Schedule existingSchedule = existingScheduleOptional.get();
-            existingSchedule.setTitle(updatedSchedule.getTitle());
-            existingSchedule.setDescription(updatedSchedule.getDescription());
-            existingSchedule.setRoomId(updatedSchedule.getRoomId());
-            existingSchedule.setClassId(updatedSchedule.getClassId());
-            existingSchedule.setCourseId(updatedSchedule.getCourseId());
-            existingSchedule.setTimeSlot(updatedSchedule.getTimeSlot());
-            return scheduleRepository.save(existingSchedule);
-        } else {
-            throw new RuntimeException("Schedule not found");
-        }
-    }
+    @Autowired
+    private CourseRepository courseRepository;
 
-    public void deleteSchedule(Long id) {
-        scheduleRepository.deleteById(id);
-    }
-
-    public List<Schedule> getAllSchedules() {
-        return scheduleRepository.findAll();
-    }
-
+    @Transactional
     public ScheduleResponseDTO generateSchedule(ScheduleRequestDTO request, boolean deleteExistingSchedules) {
-        // Step 1: Retrieve and break dependencies
         if (deleteExistingSchedules) {
-            List<Schedule> existingSchedules = scheduleRepository.findAll();
-            for (Schedule schedule : existingSchedules) {
-                if (schedule.getTimeSlot() != null) {
-                    schedule.setTimeSlot(null);
-                    scheduleRepository.save(schedule);
-                }
-            }
-
-            // Step 2: Delete TimeSlots
-            timeSlotRepository.deleteAll();
-
-            // Step 3: Delete Schedules
             scheduleRepository.deleteAll();
+            timeSlotRepository.deleteAll();
         }
 
         List<Schedule> generatedSchedules = new ArrayList<>();
-        List<CourseDTO> unscheduledCourses = new ArrayList<>(request.getCourses());
+        List<Course> allCourses = courseRepository.findAll(); // Retrieve courses from repository
         Set<Long> scheduledCourseIds = new HashSet<>();
 
-        int granularity = request.getGranularity() > 0 ? request.getGranularity() : 180; // Default to 3 hours if not
-                                                                                         // provided
-        int pauseDuration = 15; // Default pause duration in minutes
-        List<Integer> weekdays = request.getWeekdays();
-        List<RoomDTO> rooms = request.getRooms();
+        Settings settings = getSettings();
+        int granularity = settings != null ? settings.getGranularity()
+                : (request.getGranularity() > 0 ? request.getGranularity() : 180);
+        int pauseDuration = settings != null ? settings.getPauseDuration() : 15;
+        if (settings == null)
+            saveSettings(granularity, pauseDuration);
 
-        // Initialize time slots for each day
+        List<Integer> weekdays = request.getWeekdays();
+
         List<List<TimeSlotData>> weekTimeSlots = initializeTimeSlots(weekdays, granularity, pauseDuration);
 
-        // Implement the scheduling logic
-        for (CourseDTO course : request.getCourses()) {
-            if (scheduledCourseIds.contains(course.getId())) {
-                continue; // Skip already scheduled courses
-            }
+        // Retrieve rooms from repository
+        List<Room> rooms = roomRepository.findAll();
+        // TimeSlotData temp = !allCourses.isEmpty() ? new TimeSlotData(null, null,
+        // pauseDuration) : null;
+        // System.out.println(temp.getEndTime());
+        for (Course course : allCourses) {
+            if (scheduledCourseIds.contains(course.getId()))
+                continue;
 
             boolean scheduled = false;
             for (int day = 0; day < weekTimeSlots.size(); day++) {
                 List<TimeSlotData> dayTimeSlots = weekTimeSlots.get(day);
                 for (TimeSlotData timeSlotData : dayTimeSlots) {
                     if (timeSlotData.isAvailable() && timeSlotData.canAccommodate(granularity)) {
-                        for (RoomDTO room : rooms) {
-                            if (room.getCapacity() >= course.getExpectedStudents()
-                                    && timeSlotData.assignCourse(course, room, granularity)) {
-                                Schedule schedule = createScheduleWithoutTimeSlot(course, room, day + 1);
-                                generatedSchedules.add(schedule);
-                                saveTimeSlotForSchedule(timeSlotData, schedule, day + 1);
-                                scheduledCourseIds.add(course.getId());
-                                scheduled = true;
-                                break;
+                        for (Room room : rooms) {
+                            SchoolClass schoolClass = course.getSchoolClass(); // Retrieve school class from course
+                            if (schoolClass != null && room.getCapacity() >= schoolClass.getNumberOfStudents() &&
+                                    timeSlotData.assignCourse(course, room, granularity)) {
+                                if (isRoomAndClassAvailable(room, schoolClass.getId(),
+                                        new TimeSlot(timeSlotData.getStartTime(), timeSlotData.getEndTime(), day + 1),
+                                        day + 1, generatedSchedules)) {
+                                    Schedule schedule = createScheduleWithoutTimeSlot(course, room, schoolClass,
+                                            day + 1);
+                                    generatedSchedules.add(schedule);
+                                    saveTimeSlotForSchedule(timeSlotData, schedule, day + 1);
+                                    scheduledCourseIds.add(course.getId());
+                                    scheduled = true;
+                                    break;
+                                }
                             }
                         }
                         if (scheduled)
@@ -123,50 +104,54 @@ public class ScheduleService {
             }
 
             if (!scheduled) {
-                unscheduledCourses.add(course);
-            } else {
-                unscheduledCourses.remove(course);
+                // Handle unscheduled courses if needed
             }
         }
 
         ScheduleResponseDTO response = new ScheduleResponseDTO();
         response.setSchedule(generatedSchedules);
-        response.setUnscheduled(unscheduledCourses);
+        // Add unscheduled courses to response if applicable
         return response;
     }
 
-    private List<List<TimeSlotData>> initializeTimeSlots(List<Integer> weekdays, int granularity, int pauseDuration) {
-        List<List<TimeSlotData>> weekTimeSlots = new ArrayList<>();
-        for (int day = 0; day < weekdays.size(); day++) {
-            int daySlots = weekdays.get(day);
-            List<TimeSlotData> dayTimeSlots = new ArrayList<>();
-            int totalMinutes = daySlots * granularity + (daySlots - 1) * pauseDuration;
-            LocalDateTime startTime = LocalDateTime.of(2024, 1, day + 1, 8, 0); // Example start time
-            for (int i = 0; i < totalMinutes; i += (granularity + pauseDuration)) {
-                LocalDateTime endTime = startTime.plusMinutes(granularity);
-                dayTimeSlots.add(new TimeSlotData(startTime, endTime));
-                startTime = endTime.plusMinutes(pauseDuration);
-            }
-            weekTimeSlots.add(dayTimeSlots);
-        }
-        return weekTimeSlots;
-    }
-
-    private Schedule createScheduleWithoutTimeSlot(CourseDTO course, RoomDTO room, int dayOfWeek) {
-        // Create the Schedule entity without setting the TimeSlot
-        Schedule schedule = new Schedule();
-        schedule.setTitle("Course " + course.getId());
-        schedule.setDescription("Level: " + course.getLevel());
-        schedule.setRoomId(room.getId());
-        schedule.setClassId(course.getClassId());
-        schedule.setCourseId(course.getId());
-
-        // Save the Schedule entity
+    public Schedule addSchedule(Schedule schedule) {
         return scheduleRepository.save(schedule);
     }
 
+    public Optional<Schedule> getScheduleById(Long id) {
+        return scheduleRepository.findById(id);
+    }
+
+    public List<Schedule> getAllSchedules() {
+        return scheduleRepository.findAll();
+    }
+
+    public void deleteScheduleById(Long id) {
+        scheduleRepository.deleteById(id);
+    }
+
+    public Schedule updateSchedule(Long id, Schedule schedule) {
+        if (!scheduleRepository.existsById(id)) {
+            throw new RuntimeException("Schedule not found");
+        }
+        schedule.setId(id);
+        return scheduleRepository.save(schedule);
+    }
+
+    private Schedule createScheduleWithoutTimeSlot(Course course, Room room, SchoolClass schoolClass, int dayOfWeek) {
+        Schedule schedule = new Schedule();
+        schedule.setTitle("Course " + course.getId());
+        schedule.setDescription("Level: " + course.getLevel());
+        schedule.setClassId(course.getSchoolClass().getId());
+        schedule.setCourseId(course.getId());
+        schedule.setRoom(room);
+        schedule.setSchoolClass(schoolClass);
+        Schedule savedSchedule = scheduleRepository.save(schedule);
+
+        return savedSchedule;
+    }
+
     private void saveTimeSlotForSchedule(TimeSlotData timeSlotData, Schedule schedule, int dayOfWeek) {
-        // Check if a TimeSlot already exists
         Optional<TimeSlot> existingTimeSlot = timeSlotRepository.findByStartTimeAndEndTimeAndDayOfWeek(
                 timeSlotData.getStartTime(), timeSlotData.getEndTime(), dayOfWeek);
 
@@ -174,68 +159,81 @@ public class ScheduleService {
         if (existingTimeSlot.isPresent()) {
             timeSlot = existingTimeSlot.get();
         } else {
-            // Create and save a new TimeSlot entity
             timeSlot = new TimeSlot();
             timeSlot.setStartTime(timeSlotData.getStartTime());
             timeSlot.setEndTime(timeSlotData.getEndTime());
             timeSlot.setDayOfWeek(dayOfWeek);
-            timeSlotRepository.save(timeSlot);
+            timeSlot = timeSlotRepository.save(timeSlot); // Save and get ID
         }
 
-        // Set the TimeSlot in Schedule and save it
         schedule.setTimeSlot(timeSlot);
         scheduleRepository.save(schedule);
     }
 
-    private class TimeSlotData {
-        private LocalDateTime startTime;
-        private LocalDateTime endTime;
-        private boolean available = true;
-        private Map<String, CourseDTO> assignedCourses = new HashMap<>(); // Keyed by classId
-
-        public TimeSlotData(LocalDateTime startTime, LocalDateTime endTime) {
-            this.startTime = startTime;
-            this.endTime = endTime;
-        }
-
-        public boolean isAvailable() {
-            return available;
-        }
-
-        public boolean canAccommodate(int granularity) {
-            return available && (endTime.compareTo(startTime.plusMinutes(granularity))) != -1;
-        }
-
-        public boolean assignCourse(CourseDTO course, RoomDTO room, int granularity) {
-            if (isAvailable()
-                    && canAccommodate(granularity)
-                    && room.getCapacity() >= course.getExpectedStudents()
-                    && !assignedCourses.containsKey(course.getClassId())) {
-                this.available = false;
-                assignedCourses.put(course.getClassId(), course);
-                return true;
-            }
+    private boolean isRoomAndClassAvailable(Room room, String classId, TimeSlot timeSlot, int dayOfWeek,
+            List<Schedule> generatedSchedules) {
+        if (room == null) {
             return false;
         }
 
-        public LocalDateTime getStartTime() {
-            return startTime;
+        Optional<SchoolClass> schoolClassOpt = schoolClassService.getClassById(classId);
+        if (schoolClassOpt.isEmpty()) {
+            return false; // School class not found
         }
 
-        public LocalDateTime getEndTime() {
-            return endTime;
+        SchoolClass schoolClass = schoolClassOpt.get();
+        if (room.getCapacity() < schoolClass.getNumberOfStudents()) {
+            return false; // Room capacity is less than the number of students in the class
         }
+
+        for (Schedule schedule : generatedSchedules) {
+            if (!schedule.getId().equals(timeSlot.getId()) &&
+                    schedule.getRoom().getId().equals(room.getId()) &&
+                    schedule.getTimeSlot().getDayOfWeek() == dayOfWeek &&
+                    timeSlotsOverlap(schedule.getTimeSlot(), timeSlot)) {
+                return false; // Room is already booked
+            }
+            if (!schedule.getId().equals(timeSlot.getId()) &&
+                    schedule.getSchoolClass().getId().equals(classId) &&
+                    schedule.getTimeSlot().getDayOfWeek() == dayOfWeek &&
+                    timeSlotsOverlap(schedule.getTimeSlot(), timeSlot)) {
+                return false; // Class is already following another course
+            }
+        }
+        return true;
     }
 
-    public void saveSettings(int granularity, int pauseDuration) {
+    private List<List<TimeSlotData>> initializeTimeSlots(List<Integer> weekdays, int granularity, int pauseDuration) {
+        List<List<TimeSlotData>> weekTimeSlots = new ArrayList<>();
+        for (int weekday : weekdays) {
+            List<TimeSlotData> dayTimeSlots = new ArrayList<>();
+            LocalDateTime startTime = LocalDateTime.now().withHour(8).withMinute(0).withSecond(0).withNano(0); // Start
+                                                                                                               // at 8
+                                                                                                               // AM
+            for (int i = 0; i < weekday; i++) {
+                LocalDateTime endTime = startTime.plusMinutes(granularity);
+                dayTimeSlots.add(new TimeSlotData(startTime, endTime, pauseDuration));
+                startTime = endTime.plusMinutes(pauseDuration);
+            }
+            weekTimeSlots.add(dayTimeSlots);
+        }
+        return weekTimeSlots;
+    }
+
+    private Settings getSettings() {
+        return settingsRepository.findById(1L).orElse(null);
+    }
+
+    private void saveSettings(int granularity, int pauseDuration) {
         Settings settings = new Settings();
+        settings.setId(1L);
         settings.setGranularity(granularity);
         settings.setPauseDuration(pauseDuration);
         settingsRepository.save(settings);
     }
 
-    public Settings getSettings() {
-        return settingsRepository.findAll().stream().findFirst().orElse(null);
+    private boolean timeSlotsOverlap(TimeSlot existingSlot, TimeSlot newSlot) {
+        return (newSlot.getStartTime().isBefore(existingSlot.getEndTime()) &&
+                newSlot.getEndTime().isAfter(existingSlot.getStartTime()));
     }
-
 }

@@ -1,7 +1,12 @@
-package com.vaybe.scheduling.dto;
+package com.vaybe.scheduling.model;
 
-public class RoomDTO {
-    private Long id; // Change to Long
+import jakarta.persistence.*;
+
+@Entity
+public class Room {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     private String name;
     private int capacity;
 
@@ -30,12 +35,9 @@ public class RoomDTO {
         this.capacity = capacity;
     }
 
-    public void WhoAmI() {
-        System.out.println(
-                "------------------"
-                        + "\nid: " + id
-                        + "\nname: " + name
-                        + "\ncapacity: " + capacity
-                        + "\n------------------");
+    public String whoAmI() {
+        return "id: " + id
+                + "\nname: " + name
+                + "\ncapacity: " + capacity;
     }
 }

@@ -2,54 +2,69 @@ package com.vaybe.scheduling.controller;
 
 import com.vaybe.scheduling.dto.ScheduleRequestDTO;
 import com.vaybe.scheduling.dto.ScheduleResponseDTO;
-import com.vaybe.scheduling.model.Settings;
 import com.vaybe.scheduling.model.Schedule;
+import com.vaybe.scheduling.service.RoomService;
 import com.vaybe.scheduling.service.ScheduleService;
+import com.vaybe.scheduling.service.SchoolClassService;
+
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
-@RequestMapping("/api/schedule")
+@RequestMapping("/api/schedules")
 public class ScheduleController {
 
     @Autowired
     private ScheduleService scheduleService;
 
+    @Autowired
+    private RoomService roomService;
+
+    @Autowired
+    private SchoolClassService schoolClassService;
+
     @PostMapping("/generate")
     public ScheduleResponseDTO generateSchedule(@RequestBody ScheduleRequestDTO request,
-            @RequestParam(defaultValue = "false") boolean deleteExistingSchedules) {
+            @RequestParam boolean deleteExistingSchedules) {
+        // Call RoomService to handle room creation
+        if (request.getRooms() != null) {
+            roomService.createRoomsFromRequest(request.getRooms());
+        }
+
+        // Call SchoolClassService to handle school class creation
+        if (request.getSchoolClasses() != null) {
+            schoolClassService.createClassesFromRequest(request.getSchoolClasses());
+        }
+
+        // Generate schedule
         return scheduleService.generateSchedule(request, deleteExistingSchedules);
     }
 
-    @PostMapping("/settings")
-    public void saveSettings(@RequestParam int granularity, @RequestParam int pauseDuration) {
-        scheduleService.saveSettings(granularity, pauseDuration);
-    }
-
-    @GetMapping("/settings")
-    public Settings getSettings() {
-        return scheduleService.getSettings();
-    }
-
     @PostMapping("/add")
-    public Schedule createSchedule(@RequestBody Schedule schedule) {
-        return scheduleService.createSchedule(schedule);
+    public Schedule addSchedule(@RequestBody Schedule schedule) {
+        return scheduleService.addSchedule(schedule);
     }
 
-    @PutMapping("/update/{id}")
-    public Schedule updateSchedule(@PathVariable Long id, @RequestBody Schedule updatedSchedule) {
-        return scheduleService.updateSchedule(id, updatedSchedule);
+    @GetMapping("/get/{id}")
+    public Optional<Schedule> getScheduleById(@PathVariable Long id) {
+        return scheduleService.getScheduleById(id);
+    }
+
+    @GetMapping("/get-all")
+    public List<Schedule> getAllSchedules() {
+        return scheduleService.getAllSchedules();
     }
 
     @DeleteMapping("/delete/{id}")
-    public void deleteSchedule(@PathVariable Long id) {
-        scheduleService.deleteSchedule(id);
+    public void deleteScheduleById(@PathVariable Long id) {
+        scheduleService.deleteScheduleById(id);
     }
 
-    @GetMapping("/all")
-    public List<Schedule> getAllSchedules() {
-        return scheduleService.getAllSchedules();
+    @PutMapping("/update/{id}")
+    public Schedule updateSchedule(@PathVariable Long id, @RequestBody Schedule schedule) {
+        return scheduleService.updateSchedule(id, schedule);
     }
 }

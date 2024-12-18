@@ -3,10 +3,9 @@ package com.vaybe.scheduling.dto;
 public class CourseDTO {
     private Long id;
     private String level;
-    private String classId;
-    private int expectedStudents; // Add this field
+    private String schoolClassId;
 
-    // Getters and Setters
+    // Getters and setters
     public Long getId() {
         return id;
     }
@@ -23,19 +22,11 @@ public class CourseDTO {
         this.level = level;
     }
 
-    public String getClassId() {
-        return classId;
+    public String getSchoolClassId() {
+        return schoolClassId;
     }
 
-    public void setClassId(String classId) {
-        this.classId = classId;
-    }
-
-    public int getExpectedStudents() {
-        return expectedStudents;
-    }
-
-    public void setExpectedStudents(int expectedStudents) {
-        this.expectedStudents = expectedStudents;
+    public void setSchoolClassId(String schoolClassId) {
+        this.schoolClassId = schoolClassId;
     }
 }

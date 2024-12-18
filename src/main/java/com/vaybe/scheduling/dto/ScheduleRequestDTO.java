@@ -5,10 +5,11 @@ import java.util.List;
 public class ScheduleRequestDTO {
     private int granularity;
     private List<CourseDTO> courses;
-    private List<Integer> weekdays; // Number of granularity slots for each day
-    private List<RoomDTO> rooms;
+    private List<Integer> weekdays;
+    private RoomsRequestDTO rooms; // Include RoomsRequestDTO
+    private SchoolClassesRequestDTO schoolClasses; // Include SchoolClassesRequestDTO
 
-    // Getters and Setters
+    // Getters and setters
     public int getGranularity() {
         return granularity;
     }
@@ -33,11 +34,19 @@ public class ScheduleRequestDTO {
         this.weekdays = weekdays;
     }
 
-    public List<RoomDTO> getRooms() {
+    public RoomsRequestDTO getRooms() {
         return rooms;
     }
 
-    public void setRooms(List<RoomDTO> rooms) {
+    public void setRooms(RoomsRequestDTO rooms) {
         this.rooms = rooms;
+    }
+
+    public SchoolClassesRequestDTO getSchoolClasses() {
+        return schoolClasses;
+    }
+
+    public void setSchoolClasses(SchoolClassesRequestDTO schoolClasses) {
+        this.schoolClasses = schoolClasses;
     }
 }

@@ -4,10 +4,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-// import jakarta.persistence.OneToMany;
+
 import java.time.LocalDateTime;
-// import java.util.ArrayList;
-// import java.util.List;
 
 @Entity
 public class TimeSlot {
@@ -16,9 +14,20 @@ public class TimeSlot {
     private Long id;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private int dayOfWeek; // 1 for Monday, 2 for Tuesday, ..., 7 for Sunday
+    private int dayOfWeek;
 
-    // Getters and Setters
+    // Default constructor
+    public TimeSlot() {
+    }
+
+    // Constructor with parameters
+    public TimeSlot(LocalDateTime startTime, LocalDateTime endTime, int dayOfWeek) {
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.dayOfWeek = dayOfWeek;
+    }
+
+    // Getters and setters
     public Long getId() {
         return id;
     }

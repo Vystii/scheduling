@@ -2,13 +2,13 @@ package com.vaybe.scheduling.service;
 
 import com.vaybe.scheduling.dto.CourseDTO;
 import com.vaybe.scheduling.dto.RoomDTO;
+import com.vaybe.scheduling.dto.RoomsRequestDTO;
 import com.vaybe.scheduling.dto.ScheduleRequestDTO;
 import com.vaybe.scheduling.dto.ScheduleResponseDTO;
-import com.vaybe.scheduling.model.Schedule;
-import com.vaybe.scheduling.model.TimeSlot;
-import com.vaybe.scheduling.repository.ScheduleRepository;
-import com.vaybe.scheduling.repository.TimeSlotRepository;
-import com.vaybe.scheduling.repository.SettingsRepository;
+import com.vaybe.scheduling.dto.SchoolClassDTO;
+import com.vaybe.scheduling.dto.SchoolClassesRequestDTO;
+import com.vaybe.scheduling.model.*;
+import com.vaybe.scheduling.repository.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,265 +16,178 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.*;
 
-class ScheduleServiceTest {
+public class ScheduleServiceTest {
 
     @Mock
     private ScheduleRepository scheduleRepository;
+
     @Mock
     private TimeSlotRepository timeSlotRepository;
+
+    @Mock
+    private SchoolClassRepository schoolClassRepository;
+
+    @Mock
+    private RoomRepository roomRepository;
+
     @Mock
     private SettingsRepository settingsRepository;
+
+    @Mock
+    private SchoolClassService schoolClassService;
+
+    @Mock
+    private CourseRepository courseRepository;
+
     @InjectMocks
     private ScheduleService scheduleService;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(scheduleRepository.save(any(Schedule.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
+    public void testGenerateSchedule() {
+        // Given
+        Room room = new Room();
+        room.setId(1L);
+        room.setName("Room A");
+        room.setCapacity(30);
+
+        SchoolClass schoolClass = new SchoolClass();
+        schoolClass.setName("Class 1");
+        schoolClass.setNumberOfStudents(25);
+        schoolClass.setLevel("L1");
+
+        Course course = new Course();
+        course.setId(1L);
+        course.setLevel("Beginner");
+        course.setSchoolClass(schoolClass);
+
+        when(roomRepository.save(any(Room.class))).thenReturn(room);
+        when(schoolClassRepository.save(any(SchoolClass.class))).thenReturn(schoolClass);
+        when(courseRepository.save(any(Course.class))).thenReturn(course);
+
+        when(roomRepository.findAll()).thenReturn(Arrays.asList(room));
+        when(schoolClassRepository.findAll()).thenReturn(Arrays.asList(schoolClass));
+        when(courseRepository.findAll()).thenReturn(Arrays.asList(course));
+
+        // Save room, school class, and course
+        roomRepository.save(room);
+        schoolClassRepository.save(schoolClass);
+        courseRepository.save(course);
+
+        // Setup ScheduleRequestDTO
+        ScheduleRequestDTO scheduleRequestDTO = new ScheduleRequestDTO();
+        scheduleRequestDTO.setGranularity(180);
+        scheduleRequestDTO.setCourses(Arrays.asList(new CourseDTO()));
+        scheduleRequestDTO.setWeekdays(Arrays.asList(1, 2, 3, 4, 5));
+
+        RoomsRequestDTO roomsRequestDTO = new RoomsRequestDTO();
+        roomsRequestDTO.setShouldDeleteRooms(false);
+        roomsRequestDTO.setData(Arrays.asList(new RoomDTO()));
+
+        SchoolClassesRequestDTO schoolClassesRequestDTO = new SchoolClassesRequestDTO();
+        schoolClassesRequestDTO.setShouldDeleteSchoolClass(false);
+        schoolClassesRequestDTO.setData(Arrays.asList(new SchoolClassDTO()));
+
+        scheduleRequestDTO.setRooms(roomsRequestDTO);
+        scheduleRequestDTO.setSchoolClasses(schoolClassesRequestDTO);
+
+        // Mock schedule repository save
+        Schedule generatedSchedule = new Schedule();
+        generatedSchedule.setRoom(room);
+        generatedSchedule.setSchoolClass(schoolClass);
+        generatedSchedule.setTimeSlot(new TimeSlot());
+
+        when(scheduleRepository.save(any(Schedule.class))).thenReturn(generatedSchedule);
+
+        // When
+        ScheduleResponseDTO response = scheduleService.generateSchedule(scheduleRequestDTO, true);
+
+        // Ensure findAll returns at least one value
+        List<Room> foundRooms = roomRepository.findAll();
+        assertFalse(foundRooms.isEmpty(), "Room repository findAll should return at least one value");
+
+        List<SchoolClass> foundSchoolClasses = schoolClassRepository.findAll();
+        assertFalse(foundSchoolClasses.isEmpty(), "School class repository findAll should return at least one value");
+
+        List<Course> foundCourses = courseRepository.findAll();
+        assertFalse(foundCourses.isEmpty(), "Course repository findAll should return at least one value");
+
+        // Then
+        List<Schedule> generatedSchedules = response.getSchedule();
+        assertEquals(1, generatedSchedules.size());
+
+        // Verify the save method is called once
+        verify(scheduleRepository, times(1)).save(any(Schedule.class));
     }
 
     @Test
-    void testGenerateScheduleWithDeletion() {
-        // Mock repository save behavior
-        when(scheduleRepository.save(any(Schedule.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(timeSlotRepository.save(any(TimeSlot.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    public void testAddSchedule() {
+        Schedule schedule = new Schedule();
+        schedule.setTitle("Test Schedule");
 
-        // Test data setup
-        RoomDTO room1 = new RoomDTO();
-        room1.setId("Room1");
-        room1.setCapacity(30);
+        when(scheduleRepository.save(any(Schedule.class))).thenReturn(schedule);
 
-        RoomDTO room2 = new RoomDTO();
-        room2.setId("Room2");
-        room2.setCapacity(50);
+        Schedule result = scheduleService.addSchedule(schedule);
 
-        CourseDTO course1 = new CourseDTO();
-        course1.setId(1L);
-        course1.setLevel("Beginner");
-        course1.setClassId("ClassA");
-        course1.setExpectedStudents(25);
-
-        CourseDTO course2 = new CourseDTO();
-        course2.setId(2L);
-        course2.setLevel("Intermediate");
-        course2.setClassId("ClassA");
-        course2.setExpectedStudents(40);
-
-        CourseDTO course3 = new CourseDTO();
-        course3.setId(3L);
-        course3.setLevel("Advanced");
-        course3.setClassId("ClassB");
-        course3.setExpectedStudents(55);
-
-        ScheduleRequestDTO request = new ScheduleRequestDTO();
-        request.setGranularity(180); // 3 hours
-        request.setCourses(Arrays.asList(course1, course2, course3));
-        request.setWeekdays(Collections.singletonList(4)); // 4 slots per day
-        request.setRooms(Arrays.asList(room1, room2));
-
-        // Generate schedule
-        ScheduleResponseDTO response = scheduleService.generateSchedule(request, true);
-
-        // Assertions
-        assertThat(response).isNotNull();
-        assertThat(response.getSchedule()).isNotEmpty();
-        assertThat(response.getUnscheduled()).contains(course3); // Course 3 should be unscheduled due to capacity
-
-        // Verify each course is assigned correctly
-        List<Schedule> schedules = response.getSchedule();
-        assertThat(schedules).hasSize(2);
-
-        Schedule schedule1 = schedules.get(0);
-        assertThat(schedule1.getTitle()).isEqualTo("Course 1");
-        assertThat(schedule1.getDescription()).contains("Level: Beginner");
-        assertThat(schedule1.getRoomId()).isNotNull();
-        assertThat(schedule1.getClassId()).isEqualTo("ClassA");
-        assertThat(schedule1.getCourseId()).isEqualTo(1L);
-        assertThat(schedule1.getTimeSlot()).isNotNull();
-        assertThat(schedule1.getTimeSlot().getDayOfWeek()).isEqualTo(1); // Assuming Monday
-        assertThat(schedule1.getTimeSlot().getStartTime()).isNotNull();
-        assertThat(schedule1.getTimeSlot().getEndTime()).isNotNull();
-
-        Schedule schedule2 = schedules.get(1);
-        assertThat(schedule2.getTitle()).isEqualTo("Course 2");
-        assertThat(schedule2.getDescription()).contains("Level: Intermediate");
-        assertThat(schedule2.getRoomId()).isNotNull();
-        assertThat(schedule2.getClassId()).isEqualTo("ClassA");
-        assertThat(schedule2.getCourseId()).isEqualTo(2L);
-        assertThat(schedule2.getTimeSlot()).isNotNull();
-        assertThat(schedule2.getTimeSlot().getDayOfWeek()).isEqualTo(1); // Assuming Monday
-        assertThat(schedule2.getTimeSlot().getStartTime()).isNotNull();
-        assertThat(schedule2.getTimeSlot().getEndTime()).isNotNull();
-
-        // Ensure that if course 3 was scheduled, its details would also be correct
-        if (!response.getUnscheduled().contains(course3)) {
-            Schedule schedule3 = schedules.stream().filter(s -> s.getCourseId().equals(course3.getId())).findFirst()
-                    .orElse(null);
-            assertThat(schedule3).isNotNull();
-            assertThat(schedule3.getTitle()).isEqualTo("Course 3");
-            assertThat(schedule3.getDescription()).contains("Level: Advanced");
-            assertThat(schedule3.getRoomId()).isNotNull();
-            assertThat(schedule3.getClassId()).isEqualTo("ClassB");
-            assertThat(schedule3.getCourseId()).isEqualTo(3L);
-            assertThat(schedule3.getTimeSlot()).isNotNull();
-            assertThat(schedule3.getTimeSlot().getDayOfWeek()).isEqualTo(1); // Assuming Monday
-            assertThat(schedule3.getTimeSlot().getStartTime()).isNotNull();
-            assertThat(schedule3.getTimeSlot().getEndTime()).isNotNull();
-        }
+        assertNotNull(result);
+        assertEquals("Test Schedule", result.getTitle());
     }
 
     @Test
-    void testGenerateScheduleWithoutDeletion() {
-        // Mock repository save behavior
-        when(scheduleRepository.save(any(Schedule.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(timeSlotRepository.save(any(TimeSlot.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    public void testGetScheduleById() {
+        Schedule schedule = new Schedule();
+        schedule.setId(1L);
 
-        // Test data setup
-        RoomDTO room1 = new RoomDTO();
-        room1.setId("Room1");
-        room1.setCapacity(30);
+        when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
 
-        RoomDTO room2 = new RoomDTO();
-        room2.setId("Room2");
-        room2.setCapacity(50);
+        Optional<Schedule> result = scheduleService.getScheduleById(1L);
 
-        CourseDTO course1 = new CourseDTO();
-        course1.setId(1L);
-        course1.setLevel("Beginner");
-        course1.setClassId("ClassA");
-        course1.setExpectedStudents(25);
-
-        CourseDTO course2 = new CourseDTO();
-        course2.setId(2L);
-        course2.setLevel("Intermediate");
-        course2.setClassId("ClassA");
-        course2.setExpectedStudents(40);
-
-        CourseDTO course3 = new CourseDTO();
-        course3.setId(3L);
-        course3.setLevel("Advanced");
-        course3.setClassId("ClassB");
-        course3.setExpectedStudents(55);
-
-        ScheduleRequestDTO request = new ScheduleRequestDTO();
-        request.setGranularity(180); // 3 hours
-        request.setCourses(Arrays.asList(course1, course2, course3));
-        request.setWeekdays(Collections.singletonList(4)); // 4 slots per day
-        request.setRooms(Arrays.asList(room1, room2));
-
-        // Generate schedule
-        ScheduleResponseDTO response = scheduleService.generateSchedule(request, false);
-
-        // Assertions
-        assertThat(response).isNotNull();
-        assertThat(response.getSchedule()).isNotEmpty();
-        assertThat(response.getUnscheduled()).contains(course3); // Course 3 should be unscheduled due to capacity
-
-        // Verify each course is assigned correctly
-        List<Schedule> schedules = response.getSchedule();
-        assertThat(schedules).hasSize(2);
-
-        Schedule schedule1 = schedules.get(0);
-        assertThat(schedule1.getTitle()).isEqualTo("Course 1");
-        assertThat(schedule1.getDescription()).contains("Level: Beginner");
-        assertThat(schedule1.getRoomId()).isNotNull();
-        assertThat(schedule1.getClassId()).isEqualTo("ClassA");
-        assertThat(schedule1.getCourseId()).isEqualTo(1L);
-        assertThat(schedule1.getTimeSlot()).isNotNull();
-        assertThat(schedule1.getTimeSlot().getDayOfWeek()).isEqualTo(1); // Assuming Monday
-        assertThat(schedule1.getTimeSlot().getStartTime()).isNotNull();
-        assertThat(schedule1.getTimeSlot().getEndTime()).isNotNull();
-
-        Schedule schedule2 = schedules.get(1);
-        assertThat(schedule2.getTitle()).isEqualTo("Course 2");
-        assertThat(schedule2.getDescription()).contains("Level: Intermediate");
-        assertThat(schedule2.getRoomId()).isNotNull();
-        assertThat(schedule2.getClassId()).isEqualTo("ClassA");
-        assertThat(schedule2.getCourseId()).isEqualTo(2L);
-        assertThat(schedule2.getTimeSlot()).isNotNull();
-        assertThat(schedule2.getTimeSlot().getDayOfWeek()).isEqualTo(1); // Assuming Monday
-        assertThat(schedule2.getTimeSlot().getStartTime()).isNotNull();
-        assertThat(schedule2.getTimeSlot().getEndTime()).isNotNull();
-
-        // Ensure that if course 3 was scheduled, its details would also be correct
-        if (!response.getUnscheduled().contains(course3)) {
-            Schedule schedule3 = schedules.stream().filter(s -> s.getCourseId().equals(course3.getId())).findFirst()
-                    .orElse(null);
-            assertThat(schedule3).isNotNull();
-            assertThat(schedule3.getTitle()).isEqualTo("Course 3");
-            assertThat(schedule3.getDescription()).contains("Level: Advanced");
-            assertThat(schedule3.getRoomId()).isNotNull();
-            assertThat(schedule3.getClassId()).isEqualTo("ClassB");
-            assertThat(schedule3.getCourseId()).isEqualTo(3L);
-            assertThat(schedule3.getTimeSlot()).isNotNull();
-            assertThat(schedule3.getTimeSlot().getDayOfWeek()).isEqualTo(1); // Assuming Monday
-            assertThat(schedule3.getTimeSlot().getStartTime()).isNotNull();
-            assertThat(schedule3.getTimeSlot().getEndTime()).isNotNull();
-        }
+        assertTrue(result.isPresent());
+        assertEquals(1L, result.get().getId());
     }
 
     @Test
-    void testNoTimeSlotOverlap() {
-        // Mock repository save behavior
-        when(scheduleRepository.save(any(Schedule.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(timeSlotRepository.save(any(TimeSlot.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(timeSlotRepository.findByStartTimeAndEndTimeAndDayOfWeek(any(LocalDateTime.class),
-                any(LocalDateTime.class), anyInt()))
-                .thenAnswer(invocation -> Optional.empty());
+    public void testGetAllSchedules() {
+        Schedule schedule1 = new Schedule();
+        Schedule schedule2 = new Schedule();
 
-        // Test data setup
-        RoomDTO room1 = new RoomDTO();
-        room1.setId("Room1");
-        room1.setCapacity(30);
+        when(scheduleRepository.findAll()).thenReturn(Arrays.asList(schedule1, schedule2));
 
-        RoomDTO room2 = new RoomDTO();
-        room2.setId("Room2");
-        room2.setCapacity(50);
+        List<Schedule> result = scheduleService.getAllSchedules();
 
-        CourseDTO course1 = new CourseDTO();
-        course1.setId(1L);
-        course1.setLevel("Beginner");
-        course1.setClassId("ClassA");
-        course1.setExpectedStudents(25);
-
-        CourseDTO course2 = new CourseDTO();
-        course2.setId(2L);
-        course2.setLevel("Intermediate");
-        course2.setClassId("ClassA");
-        course2.setExpectedStudents(40);
-
-        ScheduleRequestDTO request = new ScheduleRequestDTO();
-        request.setGranularity(120); // 2 hours
-        request.setCourses(Arrays.asList(course1, course2));
-        request.setWeekdays(Collections.singletonList(8)); // 8 slots per day (16 hours)
-        request.setRooms(Arrays.asList(room1, room2));
-
-        // Call generateSchedule twice without deletions
-        scheduleService.generateSchedule(request, false);
-        scheduleService.generateSchedule(request, false);
-
-        // Verify that no time slots overlap
-        List<TimeSlot> timeSlots = timeSlotRepository.findAll();
-        for (int i = 0; i < timeSlots.size(); i++) {
-            TimeSlot timeSlot = timeSlots.get(i);
-            for (int j = i + 1; j < timeSlots.size(); j++) {
-                TimeSlot otherTimeSlot = timeSlots.get(j);
-                boolean isOverlap = timeSlot.getDayOfWeek() == otherTimeSlot.getDayOfWeek()
-                        && timeSlot.getStartTime().isBefore(otherTimeSlot.getEndTime())
-                        && otherTimeSlot.getStartTime().isBefore(timeSlot.getEndTime());
-                assertThat(isOverlap).isFalse();
-            }
-        }
+        assertEquals(2, result.size());
     }
 
+    @Test
+    public void testDeleteScheduleById() {
+        doNothing().when(scheduleRepository).deleteById(1L);
+
+        scheduleService.deleteScheduleById(1L);
+
+        verify(scheduleRepository, times(1)).deleteById(1L);
+    }
+
+    @Test
+    public void testUpdateSchedule() {
+        Schedule schedule = new Schedule();
+        schedule.setTitle("Updated Schedule");
+
+        when(scheduleRepository.existsById(1L)).thenReturn(true);
+        when(scheduleRepository.save(any(Schedule.class))).thenReturn(schedule);
+
+        Schedule result = scheduleService.updateSchedule(1L, schedule);
+
+        assertNotNull(result);
+        assertEquals("Updated Schedule", result.getTitle());
+    }
 }

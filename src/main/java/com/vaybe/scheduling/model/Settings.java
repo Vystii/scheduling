@@ -18,6 +18,13 @@ public class Settings {
         return id;
     }
 
+    public String toString() {
+        return "--------------"
+                + "\nid: " + id
+                + "\ngranuality" + granularity
+                + "\npause_duration" + pauseDuration;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }

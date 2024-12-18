@@ -1,26 +1,29 @@
 package com.vaybe.scheduling.model;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 
 @Entity
 public class Schedule {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String title;
     private String description;
-    private String roomId;
-    private String classId;
+    private String classId; // This is optional if you're directly using SchoolClass reference.
     private Long courseId;
 
     @ManyToOne
-    private TimeSlot timeSlot; // Reference to TimeSlot entity
+    private Room room;
 
-    // Getters and Setters
+    @ManyToOne
+    private TimeSlot timeSlot;
+
+    @ManyToOne
+    private SchoolClass schoolClass; // Add this field to link with SchoolClass
+
+    // Getters and setters
     public Long getId() {
         return id;
     }
@@ -45,14 +48,6 @@ public class Schedule {
         this.description = description;
     }
 
-    public String getRoomId() {
-        return roomId;
-    }
-
-    public void setRoomId(String roomId) {
-        this.roomId = roomId;
-    }
-
     public String getClassId() {
         return classId;
     }
@@ -69,11 +64,35 @@ public class Schedule {
         this.courseId = courseId;
     }
 
+    public Room getRoom() {
+        return room;
+    }
+
+    public void setRoom(Room room) {
+        this.room = room;
+    }
+
     public TimeSlot getTimeSlot() {
         return timeSlot;
     }
 
     public void setTimeSlot(TimeSlot timeSlot) {
         this.timeSlot = timeSlot;
+    }
+
+    public SchoolClass getSchoolClass() {
+        return schoolClass;
+    }
+
+    public void setSchoolClass(SchoolClass schoolClass) {
+        this.schoolClass = schoolClass;
+    }
+
+    public String getPresentation() {
+        return "title: " + title
+                + "\ndescription: " + description
+                + "\nid: " + id
+                + "\nroomId: " + room.getName()
+                + "\nclassId: " + classId;
     }
 }
