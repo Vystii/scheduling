@@ -47,7 +47,7 @@ public class CourseServiceTest {
         Course course = new Course();
         course.setLevel("Beginner");
         course.setSchoolClass(schoolClass);
-
+        course.setId("inf33");
         when(schoolClassRepository.findById("CLASS_001")).thenReturn(Optional.of(schoolClass));
         when(courseRepository.saveAll(any())).thenReturn(Arrays.asList(course));
 
@@ -74,11 +74,11 @@ public class CourseServiceTest {
 
     @Test
     public void testDeleteCourseById() {
-        doNothing().when(courseRepository).deleteById(1L);
+        doNothing().when(courseRepository).deleteById("inf33");
 
-        courseService.deleteCourseById(1L);
+        courseService.deleteCourseById("inf33");
 
-        verify(courseRepository, times(1)).deleteById(1L);
+        verify(courseRepository, times(1)).deleteById("inf33");
     }
 
     @Test
@@ -94,11 +94,11 @@ public class CourseServiceTest {
         course.setLevel("Advanced");
         course.setSchoolClass(schoolClass);
 
-        when(courseRepository.existsById(1L)).thenReturn(true);
+        when(courseRepository.existsById("inf33")).thenReturn(true);
         when(schoolClassRepository.findById("CLASS_002")).thenReturn(Optional.of(schoolClass));
         when(courseRepository.save(any(Course.class))).thenReturn(course);
 
-        Course result = courseService.updateCourse(1L, courseDTO);
+        Course result = courseService.updateCourse("inf33", courseDTO);
 
         assertNotNull(result);
         assertEquals("Advanced", result.getLevel());
@@ -107,13 +107,13 @@ public class CourseServiceTest {
     @Test
     public void testGetCourseById() {
         Course course = new Course();
-        course.setId(1L);
+        course.setId("inf33");
 
-        when(courseRepository.findById(1L)).thenReturn(Optional.of(course));
+        when(courseRepository.findById("inf33")).thenReturn(Optional.of(course));
 
-        Course result = courseService.getCourseById(1L);
+        Course result = courseService.getCourseById("inf33");
 
         assertNotNull(result);
-        assertEquals(1L, result.getId());
+        assertEquals("inf33", result.getId());
     }
 }

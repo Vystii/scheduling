@@ -57,7 +57,7 @@ public class ScheduleServiceTest {
     public void testGenerateSchedule() {
         // Given
         Room room = new Room();
-        room.setId(1L);
+        room.setId("room_A");
         room.setName("Room A");
         room.setCapacity(30);
 
@@ -67,7 +67,7 @@ public class ScheduleServiceTest {
         schoolClass.setLevel("L1");
 
         Course course = new Course();
-        course.setId(1L);
+        course.setId("inf33");
         course.setLevel("Beginner");
         course.setSchoolClass(schoolClass);
 

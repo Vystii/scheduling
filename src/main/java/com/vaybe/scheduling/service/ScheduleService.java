@@ -51,7 +51,7 @@ public class ScheduleService {
 
         List<Schedule> generatedSchedules = new ArrayList<>();
         List<Course> allCourses = courseRepository.findAll(); // Retrieve courses from repository
-        Set<Long> scheduledCourseIds = new HashSet<>();
+        Set<String> scheduledCourseIds = new HashSet<>();
 
         Settings settings = getSettings();
         int granularity = settings != null ? settings.getGranularity()

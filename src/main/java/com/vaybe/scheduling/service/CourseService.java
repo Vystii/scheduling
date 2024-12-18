@@ -47,11 +47,11 @@ public class CourseService {
         return courseRepository.findAll();
     }
 
-    public void deleteCourseById(Long id) {
+    public void deleteCourseById(String id) {
         courseRepository.deleteById(id);
     }
 
-    public Course updateCourse(Long id, CourseDTO courseDTO) {
+    public Course updateCourse(String id, CourseDTO courseDTO) {
         if (!courseRepository.existsById(id)) {
             throw new RuntimeException("Course not found");
         }
@@ -65,7 +65,7 @@ public class CourseService {
         return courseRepository.save(course);
     }
 
-    public Course getCourseById(Long id) {
+    public Course getCourseById(String id) {
         return courseRepository.findById(id).orElse(null);
     }
 }

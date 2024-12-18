@@ -14,8 +14,8 @@ public class Schedule {
     private Long id;
     private String title;
     private String description;
-    private String classId; // This is optional if you're directly using SchoolClass reference.
-    private Long courseId;
+    private String classId;
+    private String courseId;
 
     @ManyToOne
     private Room room;
@@ -68,11 +68,11 @@ public class Schedule {
         this.classId = classId;
     }
 
-    public Long getCourseId() {
+    public String getCourseId() {
         return courseId;
     }
 
-    public void setCourseId(Long courseId) {
+    public void setCourseId(String courseId) {
         this.courseId = courseId;
     }
 

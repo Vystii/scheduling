@@ -44,7 +44,6 @@ public class ScheduleController {
         }
 
         // Call CourseService to handle course creation
-        System.out.println(request.getCourses());
         if (request.getCourses() != null && !request.getCourses().isEmpty()) {
             courseService.createCoursesFromRequest(request.getCourses());
         }

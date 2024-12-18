@@ -1,16 +1,16 @@
 package com.vaybe.scheduling.dto;
 
 public class RoomDTO {
-    private Long id; // Change to Long
+    private String id; // Change to Long
     private String name;
     private int capacity;
 
     // Getters and setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

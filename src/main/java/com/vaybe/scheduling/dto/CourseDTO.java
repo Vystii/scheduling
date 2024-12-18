@@ -1,16 +1,16 @@
 package com.vaybe.scheduling.dto;
 
 public class CourseDTO {
-    private Long id;
+    private String id;
     private String level;
     private String schoolClassId;
 
     // Getters and setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

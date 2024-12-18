@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 @Entity
 public class Course {
     @Id
-    private Long id;
+    private String id;
     private String level;
 
     @ManyToOne
@@ -20,11 +20,11 @@ public class Course {
     }
 
     // Getters and setters
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
