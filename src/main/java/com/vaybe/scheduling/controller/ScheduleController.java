@@ -6,6 +6,7 @@ import com.vaybe.scheduling.model.Schedule;
 import com.vaybe.scheduling.service.RoomService;
 import com.vaybe.scheduling.service.ScheduleService;
 import com.vaybe.scheduling.service.SchoolClassService;
+import com.vaybe.scheduling.service.CourseService;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +27,9 @@ public class ScheduleController {
     @Autowired
     private SchoolClassService schoolClassService;
 
+    @Autowired
+    private CourseService courseService; // Add CourseService
+
     @PostMapping("/generate")
     public ScheduleResponseDTO generateSchedule(@RequestBody ScheduleRequestDTO request,
             @RequestParam boolean deleteExistingSchedules) {
@@ -37,6 +41,12 @@ public class ScheduleController {
         // Call SchoolClassService to handle school class creation
         if (request.getSchoolClasses() != null) {
             schoolClassService.createClassesFromRequest(request.getSchoolClasses());
+        }
+
+        // Call CourseService to handle course creation
+        System.out.println(request.getCourses());
+        if (request.getCourses() != null && !request.getCourses().isEmpty()) {
+            courseService.createCoursesFromRequest(request.getCourses());
         }
 
         // Generate schedule

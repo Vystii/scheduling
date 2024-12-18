@@ -5,13 +5,18 @@ import jakarta.persistence.*;
 @Entity
 public class Course {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String level;
 
     @ManyToOne
     @JoinColumn(name = "class_id")
     private SchoolClass schoolClass;
+
+    public String whoAmI() {
+        return "---------------"
+                + "\nid: " + id
+                + "\nlevel: " + level + "\n";
+    }
 
     // Getters and setters
     public Long getId() {

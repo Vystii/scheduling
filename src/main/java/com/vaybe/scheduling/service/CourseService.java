@@ -39,6 +39,7 @@ public class CourseService {
 
             courses.add(course);
         }
+        courseRepository.saveAll(courses);
         return courses;
     }
 

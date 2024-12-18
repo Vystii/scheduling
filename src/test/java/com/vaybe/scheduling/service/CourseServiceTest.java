@@ -57,7 +57,7 @@ public class CourseServiceTest {
         assertEquals(1, createdCourses.size());
         assertEquals("Beginner", createdCourses.get(0).getLevel());
         verify(courseRepository, times(1)).deleteAll();
-        verify(courseRepository, times(1)).saveAll(any());
+        verify(courseRepository, times(2)).saveAll(any());
     }
 
     @Test

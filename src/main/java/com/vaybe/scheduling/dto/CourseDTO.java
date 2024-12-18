@@ -29,4 +29,11 @@ public class CourseDTO {
     public void setSchoolClassId(String schoolClassId) {
         this.schoolClassId = schoolClassId;
     }
+
+    public String whoAmI() {
+        return "-------------------"
+                + "\nid: " + id
+                + "\nlevel: " + level
+                + "\nclass: " + schoolClassId + "\n";
+    }
 }
