@@ -30,12 +30,11 @@ public class RoomDTO {
         this.capacity = capacity;
     }
 
-    public void WhoAmI() {
-        System.out.println(
-                "------------------"
-                        + "\nid: " + id
-                        + "\nname: " + name
-                        + "\ncapacity: " + capacity
-                        + "\n------------------");
+    public String WhoAmI() {
+        return "------------------"
+                + "\nid: " + id
+                + "\nname: " + name
+                + "\ncapacity: " + capacity
+                + "\n------------------";
     }
 }

@@ -15,7 +15,8 @@ public class Course {
     public String whoAmI() {
         return "---------------"
                 + "\nid: " + id
-                + "\nlevel: " + level + "\n";
+                + "\nlevel: " + level
+                + "\nschoolClass: " + schoolClass + "\n";
     }
 
     // Getters and setters

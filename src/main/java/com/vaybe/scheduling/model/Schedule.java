@@ -1,6 +1,8 @@
 package com.vaybe.scheduling.model;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 
@@ -8,6 +10,7 @@ import jakarta.persistence.ManyToOne;
 public class Schedule {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String title;
     private String description;
@@ -22,6 +25,15 @@ public class Schedule {
 
     @ManyToOne
     private SchoolClass schoolClass; // Add this field to link with SchoolClass
+
+    public String whoAmI() {
+        return "-------------"
+                + "\nid: " + id
+                + "\ntitle: " + title
+                + "\ndescription: " + description
+                + "\nclassId: " + classId
+                + "\ncourseId: " + courseId + "\n";
+    }
 
     // Getters and setters
     public Long getId() {

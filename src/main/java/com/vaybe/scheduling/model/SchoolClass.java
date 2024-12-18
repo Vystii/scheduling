@@ -12,6 +12,13 @@ public class SchoolClass {
     private int numberOfStudents;
     private String level;
 
+    public String whoAmI() {
+        return "---------------------"
+                + "\nname: " + name
+                + "\nlevel: " + level
+                + "\nnumber: " + numberOfStudents;
+    }
+
     // Getters and setters
     public String getName() {
         return name;

@@ -66,13 +66,9 @@ public class ScheduleService {
 
         // Retrieve rooms from repository
         List<Room> rooms = roomRepository.findAll();
-        // TimeSlotData temp = !allCourses.isEmpty() ? new TimeSlotData(null, null,
-        // pauseDuration) : null;
-        // System.out.println(temp.getEndTime());
         for (Course course : allCourses) {
             if (scheduledCourseIds.contains(course.getId()))
                 continue;
-
             boolean scheduled = false;
             for (int day = 0; day < weekTimeSlots.size(); day++) {
                 List<TimeSlotData> dayTimeSlots = weekTimeSlots.get(day);

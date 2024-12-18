@@ -52,7 +52,6 @@ public class RoomService {
             room.setName(roomDTO.getName());
             room.setCapacity(roomDTO.getCapacity());
             rooms.add(room);
-            System.out.println(room.whoAmI());
         }
         return roomRepository.saveAll(rooms);
     }

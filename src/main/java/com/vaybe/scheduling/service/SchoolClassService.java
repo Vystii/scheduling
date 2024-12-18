@@ -4,6 +4,9 @@ import com.vaybe.scheduling.dto.SchoolClassDTO;
 import com.vaybe.scheduling.dto.SchoolClassesRequestDTO;
 import com.vaybe.scheduling.model.SchoolClass;
 import com.vaybe.scheduling.repository.SchoolClassRepository;
+import com.vaybe.scheduling.repository.CourseRepository;
+import com.vaybe.scheduling.repository.ScheduleRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +21,12 @@ public class SchoolClassService {
     @Autowired
     private SchoolClassRepository schoolClassRepository;
 
+    @Autowired
+    private CourseRepository courseRepository;
+
+    @Autowired
+    private ScheduleRepository scheduleRepository;
+
     @Transactional
     public List<SchoolClass> createClassesFromRequest(SchoolClassesRequestDTO schoolClassesRequestDTO) {
         if (schoolClassesRequestDTO == null) {
@@ -25,6 +34,10 @@ public class SchoolClassService {
         }
 
         if (schoolClassesRequestDTO.isShouldDeleteSchoolClass()) {
+            scheduleRepository.deleteAll();
+            scheduleRepository.flush();
+            courseRepository.deleteAll();
+            courseRepository.flush();
             schoolClassRepository.deleteAll();
             schoolClassRepository.flush(); // Ensure synchronization with the database
         }
