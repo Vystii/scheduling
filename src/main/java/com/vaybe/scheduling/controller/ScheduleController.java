@@ -2,6 +2,7 @@ package com.vaybe.scheduling.controller;
 
 import com.vaybe.scheduling.dto.ScheduleRequestDTO;
 import com.vaybe.scheduling.dto.ScheduleResponseDTO;
+import com.vaybe.scheduling.model.Room;
 import com.vaybe.scheduling.model.Schedule;
 import com.vaybe.scheduling.service.RoomService;
 import com.vaybe.scheduling.service.ScheduleService;
@@ -53,8 +54,13 @@ public class ScheduleController {
     }
 
     @PostMapping("/add")
-    public Schedule addSchedule(@RequestBody Schedule schedule) {
-        return scheduleService.addSchedule(schedule);
+    public Schedule addSchedule(@RequestBody Schedule schedule, @RequestParam String roomId) {
+        // Fetch the room by its id
+        Room room = roomService.getRoomById(roomId);
+        schedule.setRoom(room);
+        Schedule saved = scheduleService.addSchedule(schedule, roomId);
+        System.out.println(saved.whoAmI());
+        return saved;
     }
 
     @GetMapping("/get/{id}")

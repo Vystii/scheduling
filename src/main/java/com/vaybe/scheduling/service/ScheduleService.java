@@ -9,6 +9,7 @@ import com.vaybe.scheduling.model.SchoolClass;
 import com.vaybe.scheduling.model.Settings;
 import com.vaybe.scheduling.model.TimeSlot;
 import com.vaybe.scheduling.repository.ScheduleRepository;
+import com.vaybe.scheduling.repository.SchoolClassRepository;
 import com.vaybe.scheduling.repository.TimeSlotRepository;
 import com.vaybe.scheduling.util.TimeSlotData;
 import com.vaybe.scheduling.repository.RoomRepository;
@@ -35,6 +36,9 @@ public class ScheduleService {
 
     @Autowired
     private SettingsRepository settingsRepository;
+
+    @Autowired
+    private SchoolClassRepository schoolClassRepository;
 
     @Autowired
     private SchoolClassService schoolClassService;
@@ -110,7 +114,13 @@ public class ScheduleService {
         return response;
     }
 
-    public Schedule addSchedule(Schedule schedule) {
+    public Schedule addSchedule(Schedule schedule, String roomId) {
+        Optional<SchoolClass> classe = schoolClassRepository.findById(schedule.getClassId());
+        Optional<Room> room = roomRepository.findById(roomId);
+        if (classe.get() == null || room.get() == null) {
+            return null;
+        }
+        schedule.setRoom(room.get());
         return scheduleRepository.save(schedule);
     }
 
