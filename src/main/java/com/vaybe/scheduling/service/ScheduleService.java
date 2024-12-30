@@ -114,6 +114,10 @@ public class ScheduleService {
         return response;
     }
 
+    public List<Schedule> getSchedulesByCourseIds(List<String> courseIds) {
+        return scheduleRepository.findByCourseIdIn(courseIds);
+    }
+
     public Schedule addSchedule(Schedule schedule, String roomId) {
         Optional<SchoolClass> classe = schoolClassRepository.findById(schedule.getClassId());
         Optional<Room> room = roomRepository.findById(roomId);

@@ -59,8 +59,13 @@ public class ScheduleController {
         Room room = roomService.getRoomById(roomId);
         schedule.setRoom(room);
         Schedule saved = scheduleService.addSchedule(schedule, roomId);
-        System.out.println(saved.whoAmI());
         return saved;
+    }
+
+    @PostMapping("/get-courses-schedules")
+    public List<Schedule> getSchedulesByCourseIds(@RequestBody List<String> courseIds) {
+        System.out.println(courseIds);
+        return scheduleService.getSchedulesByCourseIds(courseIds);
     }
 
     @GetMapping("/get/{id}")
